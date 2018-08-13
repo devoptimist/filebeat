@@ -1,0 +1,55 @@
+#=========================== Filebeat inputs =============================
+
+# List of inputs to fetch data.
+filebeat.inputs:
+# Each - is an input. Most options can be set at the input level, so
+# you can use different inputs for various configurations.
+# Below are the input specific configurations.
+
+# Type of the files. Based on this the way the file is read is decided.
+# The different types cannot be mixed in one input
+#
+# Possible options are:
+# * log: Reads every line of the log file (default)
+# * stdin: Reads the standard in
+
+#------------------------------ Log input --------------------------------
+- type: log
+
+  # Change to true to enable this input configuration.
+  enabled: true
+
+  # Paths that should be crawled and fetched. Glob based paths.
+  # To fetch all ".log" files from a specific level of subdirectories
+  # /var/log/*/*.log can be used.
+  # For each file found under this path, a harvester is started.
+  # Make sure not file is defined twice as this can lead to unexpected behaviour.
+  paths:
+    - /var/log/*.log
+
+#============================== Kibana =====================================
+
+# Starting with Beats version 6.0.0, the dashboards are loaded via the Kibana API.
+# This requires a Kibana endpoint configuration.
+setup.kibana:
+
+  # Kibana Host
+  # Scheme and port can be left out and will be set to the default (http and 5601)
+  # In case you specify and additional path, the scheme is required: http://localhost:5601/path
+  # IPv6 addresses should always be defined as: https://[2001:db8::1]:5601
+  {{#if bind.kibana ~}}
+  host: "{{bind.kibana.first.sys.ip}}:{{bind.kibana.first.cfg.port}}"
+  {{else ~}}
+  {{#if cfg.kibana.enabled ~}}
+  host: "{{cfg.kibana.host}}"
+  {{/if ~}}
+  {{/if ~}}
+
+#-------------------------- Elasticsearch output ------------------------------
+output.elasticsearch:
+  # Array of hosts to connect to.
+  {{#if bind.elasticsearch ~}}
+  hosts: [{{#each bind.elasticsearch.members ~}} "{{sys.ip}}"{{~#unless @last}},{{/unless}} {{/each ~}}]
+  {{else}}
+  hosts: [{{#each cfg.elasticsearch.members as |member| ~}} "{{member.host}}:{{member.port}}"{{~#unless @last}},{{/unless}} {{/each ~}}]
+  {{/if}}
